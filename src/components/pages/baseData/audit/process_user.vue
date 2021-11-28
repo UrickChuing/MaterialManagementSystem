@@ -1,0 +1,267 @@
+<template>
+  <div class="card">
+
+    <div class="text-align-center font16 font-bold">
+      添加用户
+    </div>
+
+    <div class="public-table-header">
+      <el-input v-model="reason.name" placeholder="用户名" style="width: 150px;" size="mini" clearable :disabled="table.inSearch"></el-input>
+      <el-input v-model="reason.account" placeholder="账号" style="width: 150px;" size="mini" clearable :disabled="table.inSearch"></el-input>
+      <el-select v-model="reason.beAdd" popper-class="z-index2022" placeholder="全部" size="mini" clearable :disabled="table.inSearch">
+        <el-option :key="true" label="已添加" :value="true">
+        </el-option>
+        <el-option :key="false" label="未添加" :value="false">
+        </el-option>
+      </el-select>
+      <el-button @click="initTableList()" :icon="table.inSearch? 'el-icon-refresh':'el-icon-search'" size="mini" :type="table.inSearch? 'warning':'success'"
+        :disabled="table.inSearch" circle></el-button>
+    </div>
+
+    <el-table :data="table.list" style="width: 100%" height="400px" cell-class-name="public-table-cell">
+      <el-table-column label="序号" type="index" align="center" min-width="48">
+        <template slot-scope="scope">
+          <!-- <span>{{(table.page - 1) * table.pageSize + scope.$index + 1}}</span> -->
+        </template>
+      </el-table-column>
+      <el-table-column label="用户名称" prop="name" align="center" min-width="180">
+      </el-table-column>
+      <el-table-column label="账号" prop="account" align="center" min-width="180">
+      </el-table-column>
+      <el-table-column label="操作" prop="applicationNo" align="center" width="100">
+        <template slot="header" slot-scope="scope">
+          <div class="margin-right30">
+            操作
+          </div>
+        </template>
+        <template slot-scope="scope">
+          <div class="flexCenter margin-right30" v-if="scope.row.number == 0">
+            <el-button @click="addUser(scope.row)" size="mini" icon="el-icon-plus" type="primary" circle :disabled="inSearch"></el-button>
+          </div>
+          <div class="flexRow" v-if="scope.row.number != 0">
+            <div @click="removeUser(scope.row)" class="chice-ware pointer youCanNotChoose">
+              <i class="el-icon-check"></i>
+              <i class="el-icon-close"></i>
+            </div>
+            <!--            <div class="flexCenter">
+              <el-checkbox v-model="scope.row.essential" @change="($event) => {mustUser($event,scope.row)}" :true-label="true">必要</el-checkbox>
+            </div> -->
+
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <div class="flexCenter margin-top15">
+      <el-pagination @size-change="(val)=>{table.pageSize=val;initTableList()}" @current-change="(val)=>{table.page=val;initTableList()}"
+        :current-page="table.page" :page-sizes="[10, 20, 30, 40 , 50]" :page-size="table.pageSize" layout="total, sizes, prev, pager, next, jumper"
+        :total="table.total">
+      </el-pagination>
+
+
+
+    </div>
+
+  </div>
+</template>
+
+<script>
+  export default {
+    props: ['processId'],
+    data() {
+      return {
+
+        reason: {
+          name: '',
+          account: '',
+          beAdd: '',
+          processId: null
+        },
+
+        table: {
+          list: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+          inSearch: false
+        },
+
+        inSearch: true
+
+      }
+    },
+    watch: {
+      'reason.beAdd': {
+        handler: function(newV) {
+          if (newV == null)
+            return
+          this.initTableList()
+        },
+        deep: true
+      }
+    },
+    created: function() {
+      var that = this;
+
+      that.reason.processId = that.processId;
+      that.initTableList();
+    },
+    methods: {
+
+      initTableList: function() {
+        var that = this;
+        var axios = that.axios;
+
+        that.inSearch = true;
+
+        axios({
+          method: 'post',
+          url: '/audit/process/bean/user',
+          data: {
+            reason: that.reason,
+            page: that.table.page,
+            pageSize: that.table.pageSize
+          },
+          df: false
+        }).then((response) => {
+
+          setTimeout(function() {
+            that.inSearch = false;
+            if (!response) {
+              return;
+            }
+
+            var data = response.data;
+
+            that.table.list = data.data;
+            that.table.total = data.total;
+          }, 200)
+
+
+        }).catch((error) => {
+          that.errorhanding(error)
+        })
+
+      },
+
+      addUser: function(row) {
+        var that = this;
+        var axios = that.axios;
+
+        axios({
+          method: 'post',
+          url: '/audit/process/bean/user/add',
+          data: {
+            processId: that.processId,
+            userId: row.id
+          },
+          df: true,
+          loading: true
+        }).then((response) => {
+
+          setTimeout(function() {
+            that.inSearch = false;
+            if (!response) {
+              return;
+            }
+
+            var data = response.data;
+
+            if (data.code == that.STATUS.SUCCESS) {
+              that.addSuccess(true);
+            } else {
+              that.addSuccess(false)
+            }
+            that.initTableList();
+            that.$emit("init", true);
+
+          }, 200)
+
+
+        }).catch((error) => {
+          that.errorhanding(error)
+        })
+      },
+
+      removeUser: function(row) {
+        var that = this;
+        var axios = that.axios;
+
+        axios({
+          method: 'post',
+          url: '/audit/process/bean/user/delete',
+          data: {
+            processId: that.processId,
+            userId: row.id
+          },
+          df: true,
+          loading: true
+        }).then((response) => {
+
+          setTimeout(function() {
+            that.inSearch = false;
+            if (!response) {
+              return;
+            }
+
+            var data = response.data;
+
+            if (data.code == that.STATUS.SUCCESS) {
+              that.notic(true, '移除', row.name + '已被移除');
+            } else {
+              that.notic(false, '移除', row.name + '被移除失败');
+            }
+            that.initTableList();
+            that.$emit("init", true);
+          }, 200)
+
+
+        }).catch((error) => {
+          that.errorhanding(error)
+        })
+      },
+    }
+  }
+</script>
+
+<style scoped="scoped">
+  .card {
+    border: solid 1px rgba(210, 210, 210, .8);
+    box-shadow: 0px 1px 5px rgba(202, 202, 202, 1);
+    padding: 20px;
+  }
+
+  .chice-ware {
+    margin-left: 5px;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 50%;
+    background: rgba(103, 194, 58, 1);
+    color: white;
+    line-height: 28px;
+    transition: .2s;
+  }
+
+  .chice-ware>i {
+    transition: .2s;
+  }
+
+  .chice-ware:hover {
+    background: rgba(245, 108, 108, 1)
+  }
+
+  .chice-ware:hover>i:first-child {
+    opacity: 0;
+    display: none;
+  }
+
+  .chice-ware:hover>i:last-child {
+    opacity: 1;
+  }
+
+  .chice-ware>i:last-child {
+    opacity: 0;
+  }
+</style>
